@@ -22,22 +22,17 @@
 #     when explicitly authorized by the destination host and/or network administrator.
 #     Unauthorized port scanning, using this tool for any reason, is strictly prohibited.
 #
-# CREATED: 23-0713 - by: Joe Negron <joe.negron.nyc@gmail.com>
-# UPDATED: 23-1218 - by: Joe Negron <joe.negron.nyc@gmail.com> - multi-threaded for speed
-# UPDATED: 23-0905 - by: Joe Negron <joe.negron.nyc@gmail.com> - refactored for modularity, last-hop, & spinner
-# UPDATED: 23-0911 - by: Joe Negron <joe.negron.nyc@gmail.com> - add windows ports & flagged last-hop for removal
-# UPDATED: 23-0912 - by: Joe Negron <joe.negron.nyc@gmail.com> - output to json feature
-# VERSION: v0.9 - prep for modular integrations with other library tools for webification
+# CREATED: 23-0713 - BY: Joe Negron <github.com/wwwizards>
+# UPDATED: 23-0905 - BY: Joe Negron <github.com/wwwizards> - refactored for modularity, last-hop, & spinner
+# UPDATED: 23-0911 - BY: Joe Negron <github.com/wwwizards> - add windows ports; flagged last-hop for removal
+# UPDATED: 23-0912 - BY: Joe Negron <github.com/wwwizards> - --output json feature
+# UPDATED: 23-1218 - BY: Joe Negron <github.com/wwwizards> - multi-threaded for speed
+# UPDATED: 26-0506 - BY: wwwizards <github.com/wwwizards> - liberated to wwwizards/ipscan
+# VERSION: v0.9
+# AUTODOC: https://github.com/wwwizards/pickaxe
 #
-# COPYRIGHT (c) 2023-2024 COPYLEFT (l) W:. Joseph Negron <joe.negron.nyc@gmail.com>
-#          - GNU Lesser General Public License (LGPL) - https://www.gnu.org/licenses/lgpl-3.0.html
-#          While this code is open source, it still has a copyright license that must be respected.
-#          Copyleft is ‘an agreement allowing the software to be used, modified and redistributed
-#          freely on the conditions that a notice to this effect is included with it’.
-#          As free software, it also carries no warranty. These issues are covered in much greater detail in
-#          the section called “Legal Notices”. Any persons or companies wishing to bundle and use any part
-#          of this program within a proprietary software packages and appliances are especially encouraged
-#          to read this section so you/they don't inadvertently violate the this license.
+# LICENSE: MIT - https://opensource.org/licenses/MIT
+# COPYRIGHT: (c) 2023-2026 wwwizards (Joe Negron) <github.com/wwwizards>
 #
 # USAGE:
 #     python ipscan.py "subnet1/CIDR1 subnet2/CIDR2 ..." - and then just wait for results...
