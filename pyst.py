@@ -12,7 +12,7 @@
 :REQUIRES: Python 3.9+. stdlib only (pytest optional).
 :CREATED:  2026-06-03 BY Joe Negron <Joe@LogicWizards.NYC>
 :COMPANY:  LogicWizards.NYC <LogicWizards.NYC>
-:VERSION:  0.1.2
+:VERSION:  0.1.3
 :LICENSE:  MIT
 
 Usage::
@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import io
 import itertools
 import os
 import pathlib
@@ -35,11 +36,12 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
 import time
 import unittest
 from typing import Iterable
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 
 # Reconfigure stdout/stderr to UTF-8 so emoji + box-drawing don't crash on
 # Windows cp1252 consoles (default for cmd.exe / pwsh on en-US Windows).
@@ -117,10 +119,28 @@ def _have_pytest() -> bool:
         return False
 
 
-def run_with_pytest(files: list[pathlib.Path], extra_args: list[str]) -> int:
+def run_with_pytest(files: list[pathlib.Path], extra_args: list[str],
+                    spinner: bool = True) -> int:
     cmd = [sys.executable, "-m", "pytest", *extra_args, *map(str, files)]
     print(f"{C_DIM}$ {' '.join(cmd)}{C_RESET}", flush=True)
-    return subprocess.call(cmd)
+    use_spinner = spinner and sys.stderr.isatty() and "-v" not in extra_args
+    if not use_spinner:
+        return subprocess.call(cmd)
+
+    use_unicode = (sys.stdout.encoding or "").lower().startswith("utf")
+    spin = _BackgroundSpinner(label="running pytest…",
+                              stream=sys.stderr,
+                              use_unicode=use_unicode)
+    spin.start()
+    try:
+        proc = subprocess.run(cmd, stdout=subprocess.PIPE,
+                              stderr=subprocess.STDOUT, text=True,
+                              encoding="utf-8", errors="replace")
+    finally:
+        spin.stop()
+    sys.stdout.write(proc.stdout)
+    sys.stdout.flush()
+    return proc.returncode
 
 
 def _path_to_module(p: pathlib.Path) -> str:
@@ -139,85 +159,67 @@ _SPINNER_GLYPHS_ASCII = ("|", "/", "-", "\\")
 _CLOBBER = "\r" + " " * 100 + "\r"
 
 
-class _SpinnerResult(unittest.TextTestResult):
-    """TestResult that animates a single-line spinner per running test.
+class _BackgroundSpinner:
+    """Thread-driven progress spinner.
 
-    Replaces the default dot-progress with `[N/total] glyph short_name`,
-    overwritten in place via \\r. On failure/error/skip, prints a one-line
-    status above the spinner so triage info isn't lost.
+    Runs a glyph animation on ``stream`` every ~120ms while the caller
+    does other work. Output is buffered by the caller; the spinner only
+    owns the live single line. ``update(label)`` swaps the trailing text
+    safely. ``stop()`` clears the line.
     """
 
-    def __init__(self, stream, descriptions, verbosity, total: int = 0,
-                 use_unicode: bool = True):
-        super().__init__(stream, descriptions, verbosity)
-        self._total = total
-        self._index = 0
+    _TICK_SECONDS = 0.12
+
+    def __init__(self, label: str, stream, use_unicode: bool = True):
+        self._label = label
+        self._stream = stream
         glyphs = _SPINNER_GLYPHS_UNI if use_unicode else _SPINNER_GLYPHS_ASCII
         self._glyphs = itertools.cycle(glyphs)
-        self._last_line_len = 0
+        self._lock = threading.Lock()
+        self._stop_evt = threading.Event()
+        self._started = time.perf_counter()
+        self._thread: threading.Thread | None = None
 
-    def _short(self, test) -> str:
-        try:
-            cls = test.__class__.__name__
-            return f"{cls}.{test._testMethodName}"
-        except Exception:
-            return str(test)
+    def update(self, label: str) -> None:
+        with self._lock:
+            self._label = label
 
-    def _write_status(self, test, color: str = C_CYAN) -> None:
-        if not self.stream:
-            return
+    def _render(self) -> None:
         glyph = next(self._glyphs)
-        label = self._short(test)
-        # truncate label to keep within ~80 cols
-        max_label = 60
-        if len(label) > max_label:
-            label = label[: max_label - 1] + "…"
-        line = (f"{_CLOBBER}{C_DIM}[{self._index}/{self._total}]{C_RESET} "
-                f"{color}{glyph}{C_RESET} {label}")
+        elapsed = time.perf_counter() - self._started
+        label = self._label
+        if len(label) > 60:
+            label = label[:59] + "…"
+        line = (f"{_CLOBBER}{C_CYAN}{glyph}{C_RESET} {label} "
+                f"{C_DIM}({elapsed:0.1f}s){C_RESET}")
         try:
-            self.stream.write(line)
-            self.stream.flush()
+            self._stream.write(line)
+            self._stream.flush()
         except UnicodeEncodeError:
-            ascii_line = line.encode("ascii", "replace").decode("ascii")
-            self.stream.write(ascii_line)
-            self.stream.flush()
-        self._last_line_len = len(line)
+            self._stream.write(line.encode("ascii", "replace").decode("ascii"))
+            self._stream.flush()
+        except Exception:
+            pass
 
-    def _emit_above(self, text: str) -> None:
-        """Clear current spinner line, print a status, leave cursor ready."""
-        if not self.stream:
-            return
-        self.stream.write(_CLOBBER)
-        self.stream.write(text + "\n")
-        self.stream.flush()
+    def _animate(self) -> None:
+        while not self._stop_evt.is_set():
+            with self._lock:
+                self._render()
+            self._stop_evt.wait(self._TICK_SECONDS)
 
-    def startTest(self, test):  # noqa: N802 (unittest API)
-        self._index += 1
-        # call grandparent to skip TextTestResult dot-output
-        unittest.TestResult.startTest(self, test)
-        self._write_status(test)
+    def start(self) -> None:
+        self._thread = threading.Thread(target=self._animate, daemon=True)
+        self._thread.start()
 
-    def addSuccess(self, test):  # noqa: N802
-        unittest.TestResult.addSuccess(self, test)
-
-    def addError(self, test, err):  # noqa: N802
-        unittest.TestResult.addError(self, test, err)
-        self._emit_above(f"  {C_RED}✗ ERROR {self._short(test)}{C_RESET}")
-
-    def addFailure(self, test, err):  # noqa: N802
-        unittest.TestResult.addFailure(self, test, err)
-        self._emit_above(f"  {C_RED}✗ FAIL  {self._short(test)}{C_RESET}")
-
-    def addSkip(self, test, reason):  # noqa: N802
-        unittest.TestResult.addSkip(self, test, reason)
-        self._emit_above(f"  {C_YELLOW}○ SKIP  {self._short(test)}{C_DIM} ({reason}){C_RESET}")
-
-    def stopTestRun(self):  # noqa: N802
-        super().stopTestRun()
-        # clear spinner line on exit
-        if self.stream:
-            self.stream.write(_CLOBBER)
-            self.stream.flush()
+    def stop(self) -> None:
+        self._stop_evt.set()
+        if self._thread is not None:
+            self._thread.join(timeout=1.0)
+        try:
+            self._stream.write(_CLOBBER)
+            self._stream.flush()
+        except Exception:
+            pass
 
 
 def run_with_unittest(files: list[pathlib.Path], verbose: bool,
@@ -240,24 +242,28 @@ def run_with_unittest(files: list[pathlib.Path], verbose: bool,
 
     total = suite.countTestCases()
 
-    # Spinner only when output is interactive and we're not in -v (which prints
-    # one line per test — the spinner would fight that).
+    # Spinner only when output is interactive and we're not in -v (which the
+    # user probably ran specifically to see per-test names live).
     use_spinner = spinner and not verbose and sys.stderr.isatty()
     started = time.perf_counter()
     if use_spinner:
-        # Detect whether the console can handle Unicode braille glyphs. The
-        # utf-8 reconfigure at module load makes this work on modern Windows
-        # Terminal + pwsh; legacy conhost/cp1252 still trips on rare cases,
-        # so we let _SpinnerResult catch UnicodeEncodeError per write.
         use_unicode = (sys.stdout.encoding or "").lower().startswith("utf")
-
-        def _factory(stream, descriptions, verbosity):
-            return _SpinnerResult(stream, descriptions, verbosity,
-                                  total=total, use_unicode=use_unicode)
-
-        runner = unittest.TextTestRunner(verbosity=1, stream=sys.stderr,
-                                         resultclass=_factory)
-        result = runner.run(suite)
+        buf = io.StringIO()
+        runner = unittest.TextTestRunner(verbosity=1, stream=buf)
+        spin = _BackgroundSpinner(
+            label=f"running {total} unittest case{'s' if total != 1 else ''}…",
+            stream=sys.stderr,
+            use_unicode=use_unicode,
+        )
+        spin.start()
+        try:
+            result = runner.run(suite)
+        finally:
+            spin.stop()
+        # Replay buffered runner output (the dots + tracebacks) so users
+        # still see the standard unittest report between spinner and summary.
+        sys.stderr.write(buf.getvalue())
+        sys.stderr.flush()
     else:
         runner = unittest.TextTestRunner(verbosity=(2 if verbose else 1),
                                          stream=sys.stderr)
@@ -443,7 +449,7 @@ def main(argv: list[str] | None = None) -> int:
     # Single-Python run
     use_pytest = (args.runner == "pytest") or (args.runner == "auto" and _have_pytest())
     if use_pytest:
-        return run_with_pytest(matched, extra)
+        return run_with_pytest(matched, extra, spinner=not args.no_spinner)
     return run_with_unittest(matched, verbose=args.verbose,
                              spinner=not args.no_spinner)
 
