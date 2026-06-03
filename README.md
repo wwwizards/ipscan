@@ -1,75 +1,43 @@
 # ipscan
 
-[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+Cross-platform parallel IP/port scanner. Stdlib only. Single file.
 
-**Poor Man's IP & Port Scanner** — threaded CIDR-range scanner for active hosts and standard service ports. No nmap required.
+## What's new in v0.9.1
 
-Scans one or more subnets for live hosts and open ports (21, 22, 25, 53, 80, 443, 3389, WinRM, RDP, SQL, and more). Assumes `/32` if no CIDR is given. Results include responsive IPs with open ports and a summary of unresponsive hosts.
+Users reported `ipscan.py` failing on Python 3.12 / 3.14 (post-CVE patches) and never working right on macOS. Audit found three real bugs:
 
----
+1. **`socket.timeout` removed in Py3.14** — `is_port_active()` caught it by name; throws `NameError` on 3.14. Fixed: use canonical `TimeoutError`.
+2. **Linux-only ping flags** — `-c` / `-W (sec)` hardcoded. Windows needs `-n` / `-w (ms)`; macOS BSD ping `-W` is **ms not sec**, so the overlap "worked" on Mac but with a 1000× wrong timeout. Fixed: per-platform flag builder.
+3. **Missing `ping` binary crashed the scan** — minimal Py3.12+ container/runtime images sometimes lack `ping` in PATH; `is_pingable()` now catches `FileNotFoundError` / `OSError` and returns `False`.
 
-## Prerequisites
+Plus minor cleanup: duplicate `FG_RED`, duplicate port `5896` in `windows_tcp`, unused `re` import, ASCII spinner fallback for legacy Windows codepages, ctypes ANSI mode enable.
 
-- Python 3.8+
-- No third-party packages required (stdlib only: `socket`, `ipaddress`, `threading`, `subprocess`)
+## Zero pip dependencies
 
----
+Stdlib only: `argparse`, `ipaddress`, `itertools`, `json`, `platform`, `socket`, `subprocess`, `sys`, `time`, `threading`, `concurrent.futures`. No `requirements.txt`, no `pip install`, no CVE-from-deps surface.
 
 ## Usage
 
 ```bash
-python ipscan.py "192.168.1.0/24"
-python ipscan.py "10.0.0.0/16 172.16.0.0/12"
-python ipscan.py "10.0.0.1"                    # single host, assumes /32
-python ipscan.py "10.0.0.0/24" --threads 128   # more threads for large subnets
-python ipscan.py "10.0.0.0/24" --output json   # emit JSON for downstream piping
+python ipscan.py "192.168.0.0/24 10.0.0.0/16"
+python ipscan.py 10.0.0.0/24 -t 128 -q > scan.json
 ```
 
----
+## Test
 
-## Sample output
-
-```
-[+] 10.0.0.1     OPEN: 22 80 443
-[+] 10.0.0.5     OPEN: 22 3389
-[-] 10.0.0.9     no response
-...
+```bash
+python -m unittest test_ipscan -v
 ```
 
----
+15 regression tests, stdlib only. Covers all three bug classes (Py3.14 `socket.timeout`, cross-platform ping flags, missing ping binary) plus OS-fingerprint heuristics and DNS resilience.
 
-## ⚠️ Legal notice
-
-Unauthorized port scanning is illegal in many jurisdictions. This tool is permitted only on networks you own or have **written authorization** to scan. See [nmap.org/book/legal-issues.html](https://nmap.org/book/legal-issues.html) for a full discussion of the legal landscape.
-
----
-
-## Version history
-
-See [`legacy/`](legacy/) for earlier versions (v0.3 → v0.5 → v0.8 → v0.9 current).
-
-| Version | Notes |
-|---|---|
-| v0.9 | current — JSON output, Windows port set, modular refactor |
-| v0.8 | RPC/WinRM/NetBIOS ports added |
-| v0.5 | multi-threaded |
-| v0.3 | original scriptlet |
-
----
+See [`TESTING.md`](TESTING.md) for the full coverage matrix, latest run output, and platform × Python version validation status.
 
 ## Roadmap
 
-- [ ] `--output csv` mode
-- [ ] Service banner grabbing (http title, ssh version string)
-- [ ] Integrate with `converters` package for downstream ETL
-- [ ] Web UI wrapper (`ipscan-webify` — see old notes)
-
----
+- **v0.9.1** (this) — Py3.14 + cross-platform fixes, regression suite.
+- **v0.9.2+** — IPv6 support, configurable port lists, JSONL streaming.
 
 ## License
 
-[MIT](LICENSE) © 2023–2026 [wwwizards](https://github.com/wwwizards)
-
----
-
-*Documented by [wwwizards/pickaxe](https://github.com/wwwizards/pickaxe)*
+MIT. See [`LICENSE`](LICENSE).

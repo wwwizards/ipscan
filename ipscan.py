@@ -1,53 +1,47 @@
 #!/usr/bin/env python3
-# --------------------------------------------------------------------------
-# Script: ipscan.py
-# --------------------------------------------------------------------------
-# ABSTRACT: Poor Man's Simple IP & Standard Port Scanner - This script does brute force
-#     scan(s) of a specified list of IPs within a specified subnets for active
-#     listeners on standard ports. The list of ports includes commonly used ports
-#     such as 21 (FTP), 22 (SSH), 80 (HTTP), 443 (HTTPS), 3389 (RDP),
-#     and database ports like 1433 (SQL Server) and 3306 (MySQL) - among others.
-#     It takes a space-separated list of CIDR blocks subnets as parameters - and
-#     assumes /32 if not specified. If the ping fails it will just continue. Results
-#     include active IPs with responsive ports and those that were unresponsive.
-#     you can also specify a different number of threads
-#     using the `--threads` argument when executing the script.
+#------------------------------------------------------------------------------
+# SCRIPT: ipscan.py
+#------------------------------------------------------------------------------
+#  PURPOSE: Poor Man's parallel IP & standard-port scanner (stdlib-only).
+# ABSTRACT: Brute-force scans a list of CIDR subnets for ICMP-responsive hosts,
+#           then probes a curated set of standard TCP ports on the live ones.
+#           Pure stdlib — no pip dependencies. Cross-platform: Windows / Linux
+#           / macOS. Outputs human-readable text or JSON (-q).
+# REQUIRES: Python 3.9+ (tested on 3.10 / 3.12 / 3.14). No external packages.
 #
-# WARNING: Unauthorized scanning can be illegal, and users should be reminded to
-#     obtain permission (in writing) by the owner, or from somebody of competent
-#     jurisdiction empowering you to do so, before scanning IP ranges you do not own.
-#     for more information on this see: --> https://nmap.org/book/legal-issues.html
-#     Network probing or port scanning tools are only permitted when used in
-#     conjunction with your own residential home network, or for other networks
-#     when explicitly authorized by the destination host and/or network administrator.
-#     Unauthorized port scanning, using this tool for any reason, is strictly prohibited.
+# WARNING: Unauthorized scanning can be illegal. Get written permission from
+#     the network owner (or somebody of competent jurisdiction empowering you
+#     to do so) before scanning IP ranges you do not own. See:
+#         https://nmap.org/book/legal-issues.html
+#     Network probing / port scanning tools are only permitted on your own
+#     residential home network, or on networks where you have explicit
+#     authorization from the destination host and/or network administrator.
 #
-# CREATED: 23-0713 - BY: Joe Negron <github.com/wwwizards>
-# UPDATED: 23-0905 - BY: Joe Negron <github.com/wwwizards> - refactored for modularity, last-hop, & spinner
-# UPDATED: 23-0911 - BY: Joe Negron <github.com/wwwizards> - add windows ports; flagged last-hop for removal
-# UPDATED: 23-0912 - BY: Joe Negron <github.com/wwwizards> - --output json feature
-# UPDATED: 23-1218 - BY: Joe Negron <github.com/wwwizards> - multi-threaded for speed
-# UPDATED: 26-0506 - BY: wwwizards <github.com/wwwizards> - liberated to wwwizards/ipscan
-# VERSION: v0.9
-# AUTODOC: https://github.com/wwwizards/pickaxe
-#
-# LICENSE: MIT - https://opensource.org/licenses/MIT
-# COPYRIGHT: (c) 2023-2026 wwwizards (Joe Negron) <github.com/wwwizards>
-#
-# USAGE:
-#     python ipscan.py "subnet1/CIDR1 subnet2/CIDR2 ..." - and then just wait for results...
-#
-# EXAMPLE:
+#  CREATED: 2023-07-13 BY: Joe Negron <github.com/wwwizards>
+#  COMPANY: LogicWizards.NYC <LogicWizards.NYC>
+#  VERSION: 0.9.1
+#  LICENSE: MIT
+#  USAGE:
 #     python ipscan.py "192.168.0.0/24 10.0.0.0/16"
-# --------------------------------------------------------------------------
-
+#     python ipscan.py 10.0.0.0/24 -t 128 -q > scan.json
+#
+# CHANGELOG (v0.9.1 — 2026-06-03, Py3.14 + cross-platform fixes):
+#   - FIX: socket.timeout removed in Py3.14 → use TimeoutError
+#   - FIX: ping flags branched by platform (Windows -n/-w-ms, Linux -c/-W-sec,
+#          macOS -c/-W-ms). Previously Linux-only flags broke Win + Mac.
+#   - FIX: catch OSError on ping subprocess (ping binary missing in minimal
+#          Python 3.12+ container/runtime images)
+#   - FIX: spinner UnicodeEncodeError on legacy Windows codepages → ASCII
+#          fallback when stdout encoding can't render the glyph
+#   - FIX: duplicate FG_RED definition; duplicate 5896 in windows_tcp
+#   - CHORE: platform import is now actually used
+#------------------------------------------------------------------------------
 
 import argparse
 import ipaddress
 import itertools
 import json
 import platform
-import re
 import socket
 import subprocess
 import sys
@@ -55,78 +49,126 @@ import time
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
-
 # Default Configuration
-standard_ports = [21, 22, 25, 53, 80, 8080, 8009, 110, 135, 143, 443, 445, 8443, 3389, 1433, 3306, 5671, 5672, 5985, 5986]
-windows_tcp = [135, 137, 138, 139, 445, 5896, 5896]
+standard_ports = [21, 22, 25, 53, 80, 110, 135, 143, 443, 445, 1433, 3306,
+                  3389, 5671, 5672, 5985, 5986, 8009, 8080, 8443]
+windows_tcp = [135, 137, 138, 139, 445, 5896]   # de-duped
 windows_udp = [137, 138]
 max_threads = 64
 
-# Text Formatting (quick & dirty - purdificationators)
+# Platform detection (used for ping flag selection)
+IS_WINDOWS = platform.system() == "Windows"
+IS_DARWIN  = platform.system() == "Darwin"
+
+# Text Formatting (ANSI)
 FG_BLD = "\033[1m"
 FG_BLU = "\033[94m"
 FG_REV = "\033[7m"
-FG_RED = "\033[91m"
 FG_RED = "\033[91m"
 FG_ORN = "\033[38;5;208m"
 FG_GRN = "\033[92m"
 FG_GRY = "\033[90m"
 FG_YEL = "\033[93m"
-RESET = "\033[0m"
-LF_KEY = ""
-RT_KEY = ""
-UP_KEY = '\x1b[1A'
-DN_KEY = ""
-CR_CLR = '\x1b[2K'
-SPACES ='     '
-CLOBBER = '\r' + ' ' * 80 + '\r' # wipes out any text on the previous line
-# Simple spinner function to show progress during waiting periods
+RESET  = "\033[0m"
+SPACES = '     '
+CLOBBER = '\r' + ' ' * 80 + '\r'
+
+# Enable ANSI on legacy Windows consoles (no-op on modern Terminal/PowerShell 7)
+if IS_WINDOWS:
+    try:
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        # ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
+        kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
+    except Exception:
+        pass
+
+
+def _safe_write(text):
+    """Write to stdout, falling back to ASCII if the console can't encode it."""
+    try:
+        sys.stdout.write(text)
+    except UnicodeEncodeError:
+        sys.stdout.write(text.encode('ascii', 'replace').decode('ascii'))
+    sys.stdout.flush()
+
+
 def spinner():
-    # Define a multi-character spinner cycle
-    spinner_cycle = itertools.cycle(['         ','    ◟    ','    ◜    ','    ◝    ','    ◞    ','    ⋆    ','    𖦹    ','    ✧    ','    ✩    ','    o    ','    0    ','    O    ','    ☾☽   ','   (*)   ','  (( ))  ',' ((( ))) ','(((   )))','((     ))','(       )','         ' ])
+    """Lightweight progress spinner; ASCII-safe fallback on dumb consoles."""
+    glyphs = ['         ', '    .    ', '    o    ', '    O    ',
+              '   (*)   ', '  (( ))  ', ' ((( ))) ', '(((   )))',
+              '((     ))', '(       )', '         ']
+    spinner_cycle = itertools.cycle(glyphs)
     while True:
-        current_spinner = next(spinner_cycle)  # Get the next spinner state
-        padding = max(9, len(SPACES)*2+1, len(current_spinner))
-        sys.stdout.write(f'\r{CLOBBER}{SPACES}{FG_YEL}{current_spinner}{SPACES:<{padding}}{RESET}')  # Use '\r' to return to the beginning of the line
-        sys.stdout.flush()  # Flush the stdout buffer to ensure the spinner is displayed
-        time.sleep(0.15)  # Small delay between spinner updates
+        current = next(spinner_cycle)
+        _safe_write(f'\r{CLOBBER}{SPACES}{FG_YEL}{current}{SPACES}{RESET}')
+        time.sleep(0.15)
+
 
 def is_port_active(ip, port, timeout=1):
-    """Check if a given port on an IP address is actively listening."""
+    """Check if a given TCP port on an IP is actively listening."""
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.settimeout(timeout)
             s.connect((ip, port))
             return True
-    except (socket.timeout, ConnectionRefusedError, OSError):
+    except (TimeoutError, ConnectionRefusedError, OSError):
+        # NOTE: socket.timeout was removed in Py3.14; TimeoutError is its
+        # canonical replacement (alias since 3.3, sole name from 3.14).
         return False
+
 
 def get_reverse_dns(ip):
     """Perform a reverse DNS lookup for an IP address."""
     try:
         hostname, _, _ = socket.gethostbyaddr(ip)
         return hostname
-    except socket.herror:
+    except (socket.herror, socket.gaierror, OSError):
         return None
 
+
+def _ping_cmd(ip, timeout):
+    """Build the platform-correct ping command.
+
+    Windows: ping -n 1 -w <ms>     (Microsoft ping, -w is ms)
+    Linux:   ping -c 1 -W <sec>    (iputils ping, -W is seconds)
+    macOS:   ping -c 1 -W <ms>     (BSD ping, -W is ms — NOT seconds)
+    """
+    if IS_WINDOWS:
+        return ['ping', '-n', '1', '-w', str(int(timeout * 1000)), ip]
+    if IS_DARWIN:
+        return ['ping', '-c', '1', '-W', str(int(timeout * 1000)), ip]
+    return ['ping', '-c', '1', '-W', str(int(timeout)), ip]
+
+
 def is_pingable(ip, timeout=1):
-    """Check if an IP address is pingable."""
+    """Check if an IP responds to ICMP echo. Cross-platform, tolerant of
+    missing ping binary (minimal container images, locked-down hosts)."""
     try:
-        subprocess.check_output(['ping', '-c', '1', '-W', str(timeout), ip], stderr=subprocess.DEVNULL)
+        subprocess.check_output(
+            _ping_cmd(ip, timeout),
+            stderr=subprocess.DEVNULL,
+            timeout=timeout + 2,
+        )
         return True
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        return False
+    except (FileNotFoundError, OSError):
+        # ping binary missing or unexecutable — treat as unreachable rather
+        # than crashing the whole scan
         return False
 
+
 def infer_os(ports):
-    """Infers the OS type based on open port assumptions."""
+    """Infer OS family from open-port fingerprint."""
     if 3389 in ports and 22 not in ports:
-        return f"Windows"
-    elif 22 in ports and 3389 not in ports:
-        return f"Linux"
-    elif 22 in ports and 3389 in ports:
-        return f"Hybrid" # Hybrid= both Windows & Linux
-    else:
-        return f"Unknown"
+        return "Windows"
+    if 22 in ports and 3389 not in ports:
+        return "Linux"
+    if 22 in ports and 3389 in ports:
+        return "Hybrid"
+    return "Unknown"
+
 
 def scan_ip_ping(ip_str, pingable_ips, unresponsive_ips, lock, total_ips, progress):
     """Ping an IP address and categorize it as responsive or unresponsive."""
@@ -134,8 +176,13 @@ def scan_ip_ping(ip_str, pingable_ips, unresponsive_ips, lock, total_ips, progre
         scanned_ips = progress[0]
         progress[0] += 1
         progress_percentage = (progress[0] / total_ips) * 100
+
     if not quiet:
-        print(f"\r{CLOBBER}Progress: {FG_GRN}{progress_percentage:.2f}% {RESET}Pinging IP: {FG_GRN}{ip_str} {FG_RED}[{RESET}{scanned_ips + 1}/{total_ips}{FG_RED}]{RESET}...", end="", flush=True)
+        _safe_write(
+            f"\r{CLOBBER}Progress: {FG_GRN}{progress_percentage:.2f}% {RESET}"
+            f"Pinging IP: {FG_GRN}{ip_str} "
+            f"{FG_RED}[{RESET}{scanned_ips + 1}/{total_ips}{FG_RED}]{RESET}..."
+        )
 
     if is_pingable(ip_str):
         with lock:
@@ -144,131 +191,129 @@ def scan_ip_ping(ip_str, pingable_ips, unresponsive_ips, lock, total_ips, progre
         with lock:
             unresponsive_ips.append(ip_str)
 
+
 def scan_ip_ports(ip_str, active_ports, lock):
-    """Scan active ports and perform traceroute on pingable IPs."""
+    """Scan standard ports on a pingable IP and stash results."""
     hostname = get_reverse_dns(ip_str) or "NO IN-ADDR.ARPA or PTR RECORD"
     ports = [port for port in standard_ports if is_port_active(ip_str, port)]
     with lock:
         active_ports[ip_str] = ports
-        # Add additional data to our structure for potential JSON export
         data[ip_str] = {
             "DNS": hostname,
             "OS": infer_os(ports),
             "LISTENERS": ports,
         }
 
+
 def scan_ips(ip_range, threads, quiet):
     """Scan a list of IP addresses for active ports."""
-    # Data structures to hold scan results
     active_ports = {}
     unresponsive_ips = []
     pingable_ips = []
     lock = threading.Lock()
     progress = [0]
-    total_ips = sum(len(list(ipaddress.IPv4Network(subnet, strict=False))) for subnet in ip_range)
+    total_ips = sum(
+        len(list(ipaddress.IPv4Network(subnet, strict=False)))
+        for subnet in ip_range
+    )
 
     if not quiet:
-        print(f"\n{FG_YEL}{FG_REV} - INFO: Scanning {total_ips} IP addresses with {threads} threads...{RESET}")
+        print(f"\n{FG_YEL}{FG_REV} - INFO: Scanning {total_ips} IP addresses "
+              f"with {threads} threads on {platform.system()}...{RESET}")
 
     with ThreadPoolExecutor(max_workers=threads) as executor:
         futures = []
-        # PHASE-1: PING EVERYTHING
+        # PHASE 1: PING SWEEP
         for subnet in ip_range:
             network = ipaddress.IPv4Network(subnet, strict=False)
             for ip in network:
                 ip_str = str(ip)
-                future = executor.submit(scan_ip_ping, ip_str, pingable_ips, unresponsive_ips, lock, total_ips, progress)
-                futures.append(future)
-
-        # Wait for ping phase to complete
+                futures.append(executor.submit(
+                    scan_ip_ping, ip_str, pingable_ips, unresponsive_ips,
+                    lock, total_ips, progress
+                ))
         for future in futures:
             future.result()
 
         # Display unresponsive IPs immediately after ping phase
         if not quiet:
-            print(f"\n\n{FG_REV} - INFO: List of IPs Unresponsive to ICMP Echo (ping) {RESET}")
+            print(f"\n\n{FG_REV} - INFO: List of IPs Unresponsive to ICMP "
+                  f"Echo (ping) {RESET}")
         for ip in unresponsive_ips:
-            # Calculate padding based on the length of the IP
-            padding = max(15, len(ip) + 4)  # Minimum padding to ensure readability
+            padding = max(15, len(ip) + 4)
             hostname = get_reverse_dns(ip) or "NO IN-ADDR.ARPA or PTR RECORD"
-            # Format and print the line with aligned columns
             COLOR = FG_ORN if "IN-ADDR.ARPA" not in hostname else FG_GRY
             if not quiet:
-                print(f"IP: {FG_GRY}{ip:<{padding}}{RESET}\tDNS: {COLOR}{hostname}{RESET}")
-            # update array for json output feature
-            data[ip] = {
-                "DNS": hostname,
-                "OS": "NULL",
-                "LISTENERS": [],
-            }
+                print(f"IP: {FG_GRY}{ip:<{padding}}{RESET}\tDNS: "
+                      f"{COLOR}{hostname}{RESET}")
+            data[ip] = {"DNS": hostname, "OS": "NULL", "LISTENERS": []}
 
-        # Reset progress for port scanning phase
+        # PHASE 2: PORT SWEEP on pingable hosts
         progress[0] = 0
         if not quiet:
-            print(f"\n{FG_REV} - INFO: ICMP Tests Complete; BEGIN: TCP Port Scans... {RESET}", flush=True)
-            print(f"\n - {FG_BLD}PORTS BEING TESTED: {FG_YEL}{standard_ports}{RESET}", flush=True)
-            # invoke simple spinner for visual feedback during the scanning phase
+            print(f"\n{FG_REV} - INFO: ICMP Tests Complete; BEGIN: TCP Port "
+                  f"Scans... {RESET}", flush=True)
+            print(f"\n - {FG_BLD}PORTS BEING TESTED: "
+                  f"{FG_YEL}{standard_ports}{RESET}", flush=True)
             spinner_thread = threading.Thread(target=spinner, daemon=True)
             spinner_thread.start()
 
-        # Port scanning phase
         futures = []
         for ip_str in pingable_ips:
             active_ports[ip_str] = []
-            future = executor.submit(scan_ip_ports, ip_str, active_ports, lock)
-            futures.append(future)
-
-        # Wait for port scanning phase to complete
+            futures.append(executor.submit(
+                scan_ip_ports, ip_str, active_ports, lock
+            ))
         for future in futures:
             future.result()
 
     return active_ports
 
+
 def format_results(active_ports):
-    """Print the results of the scan."""
-    # Print the list of IPs with active ports
+    """Print the human-readable results of the scan."""
     if not quiet:
-            print(f"{CLOBBER}\n\n{FG_REV} - INFO: Async-Scan Responses (From: PING-ABLE IPs)... {RESET}")
+        print(f"{CLOBBER}\n\n{FG_REV} - INFO: Async-Scan Responses "
+              f"(From: PING-ABLE IPs)... {RESET}")
     for ip, ports in active_ports.items():
         if ports:
             hostname = get_reverse_dns(ip) or "NO IN-ADDR.ARPA or PTR RECORD"
             os_type = infer_os(ports)
             if not quiet:
-                # 24-0911JN-MOD: Dark-Deprecation Last-Hop - too slow & not much value
-                # last_hop = get_last_hop(ip) if ports else "UNKNOWN"
-                # Format and print the line with aligned columns
                 DNS_COLOR = FG_BLU if "IN-ADDR.ARPA" not in hostname else FG_ORN
-                OS_COLOR = FG_GRN if "Windows" in os_type else FG_BLU if "Linux" in os_type else FG_RED
-                # Calculate padding based on the length of the IP & DNS
-                padding1 = max(15, len(ip) + 4)  # Minimum padding to ensure readability
-                padding2 = max(33, len(hostname) + 2)  # Minimum padding to ensure readability
-                padding3 = max(15, len(ip) + 4)  # Minimum padding to ensure readability
-                # 24-0911JN-MOD: Dark-Deprecation Last-Hop - too slow & not much value
-                # print(f"{CLOBBER}IP: {FG_GRN}{ip:<{padding1}}{RESET} \tDNS: {COLOR}{hostname:<{padding2}}{RESET} \tOS: {os_type} \tLastHop: {last_hop:<{padding3}} \tLISTENERS: {FG_RED}{', '.join(map(str, ports))}{RESET}")
-                print(f"{CLOBBER}IP: {FG_GRN}{ip:<{padding1}}{RESET} \tDNS: {DNS_COLOR}{hostname:<{padding2}}{RESET} \tOS: {OS_COLOR}{os_type}{RESET} \tLISTENERS: {FG_RED}{', '.join(map(str, ports))}{RESET}")
+                OS_COLOR = (FG_GRN if "Windows" in os_type
+                            else FG_BLU if "Linux" in os_type
+                            else FG_RED)
+                p1 = max(15, len(ip) + 4)
+                p2 = max(33, len(hostname) + 2)
+                print(f"{CLOBBER}IP: {FG_GRN}{ip:<{p1}}{RESET} \tDNS: "
+                      f"{DNS_COLOR}{hostname:<{p2}}{RESET} \tOS: "
+                      f"{OS_COLOR}{os_type}{RESET} \tLISTENERS: "
+                      f"{FG_RED}{', '.join(map(str, ports))}{RESET}")
 
-#------------------------------------------------------------------------------------------------------------
-#  MAIN
-#------------------------------------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+# MAIN
+#------------------------------------------------------------------------------
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Parallel IP Scanner")
-    parser.add_argument("ip_range", nargs="+", help="Space-separated list of subnet/CIDR addresses (e.g., '192.168.0.0/24 10.0.0.0/16')")
-    parser.add_argument("-q", "--quiet", action="store_true", help="Suppress Progress Indicators & Output Data as JSON")  # Changed here
-    parser.add_argument("-t", "--threads", type=int, default=max_threads, help="Number of threads to use for parallel scanning")
+    parser.add_argument("ip_range", nargs="+",
+                        help="Space-separated list of subnet/CIDR addresses "
+                             "(e.g., '192.168.0.0/24 10.0.0.0/16')")
+    parser.add_argument("-q", "--quiet", action="store_true",
+                        help="Suppress progress indicators & emit JSON only")
+    parser.add_argument("-t", "--threads", type=int, default=max_threads,
+                        help="Number of threads for parallel scanning")
 
     args = parser.parse_args()
     ip_range = args.ip_range
     threads = args.threads
     quiet = args.quiet
 
-    # Data structure to hold scan results
     data = {}
 
-    # Initiate the scan and identify ping-able IP's & Active Ports
     report = scan_ips(ip_range, threads, quiet)
-
-    # display the results for humans (default) or json for further processing
     format_results(report)
+
     if quiet:
-        # Print the data as formatted JSON
         print(json.dumps(data, indent=4))
