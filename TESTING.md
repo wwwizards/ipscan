@@ -96,8 +96,10 @@ python -m unittest test_ipscan -v *>&1 | Tee-Object "testrun-Windows-$(python --
 |---|---|---|---|
 | Windows 11 | 3.14.5 | ✅ 15/15 | v0.9.1 baseline; also passes elevated; perf slower than 3.12 |
 | Windows 11 | 3.12.0 | ✅ 15/15 | non-elevated + elevated, 2026-06-03 |
-| Windows Server 2022 | 3.14.5 | ✅ 15/15 | 2026-06-03 |
+| Windows Server 2022 | 3.14.5 | ✅ 15/15 | 2026-06-03; pyst -a all green |
+| Windows Server 2022 | multi (`pyst -a`) | ✅ | every Python on box, 2026-06-03 |
 | macOS | 3.12.12 | ✅ 15/15 | non-elevated, 2026-06-03 |
+| macOS | multi (`pyst -a`) | ✅ | every Python on box, 2026-06-03 |
 | Windows 10 | 3.12.x | 🟡 pending | |
 | Linux | 3.10+ | 🟡 pending | original complainer to validate |
 

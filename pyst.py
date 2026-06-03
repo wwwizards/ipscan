@@ -11,29 +11,40 @@
 # REQUIRES: Python 3.9+. stdlib only (pytest optional).
 #  CREATED: 2026-06-03 BY: Joe Negron <Joe@LogicWizards.NYC>
 #  COMPANY: LogicWizards.NYC <LogicWizards.NYC>
-#  VERSION: 0.1.0
+#  VERSION: 0.1.1
 #  LICENSE: MIT
 #  USAGE:
 #     pyst                       # all tests
 #     pyst smoke                 # tier match: test_*_smoke.py
 #     pyst unit ipscan           # AND-match: test_ipscan_unit.py
 #     pyst --tree                # show discovered tests, grouped by tier
-#     pyst --all-pythons smoke   # run smoke tier across every py -0p Python
+#     pyst -a smoke              # --all-pythons: fan-out across every Python
 #     PYST_MODE=OFF pyst smoke   # passthrough — raw runner, no pyst logic
 # ----------------------------------------------------------------------------
 """pyst — Python's smart test runner. Companion to PowerShell's psst."""
 from __future__ import annotations
 
 import argparse
+import importlib
 import os
 import pathlib
 import re
 import shutil
 import subprocess
 import sys
+import time
+import unittest
 from typing import Iterable
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
+
+# Reconfigure stdout/stderr to UTF-8 so emoji + box-drawing don't crash on
+# Windows cp1252 consoles (default for cmd.exe / pwsh on en-US Windows).
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
+    except Exception:
+        pass
 
 TIERS = ("smoke", "sanity", "unit", "integration")
 TIER_SUFFIX_RE = re.compile(
@@ -109,24 +120,65 @@ def run_with_pytest(files: list[pathlib.Path], extra_args: list[str]) -> int:
     return subprocess.call(cmd)
 
 
+def _path_to_module(p: pathlib.Path) -> str:
+    cwd = pathlib.Path.cwd().resolve()
+    try:
+        rel = p.resolve().relative_to(cwd)
+    except ValueError:
+        rel = p
+    return ".".join(rel.with_suffix("").parts)
+
+
 def run_with_unittest(files: list[pathlib.Path], verbose: bool) -> int:
-    """Build a unittest discovery argv from the file list."""
-    # unittest takes module names — convert paths → dotted modules relative to cwd.
-    mods = []
-    cwd = pathlib.Path.cwd()
+    """In-process unittest run — captures counts for the psst-style summary."""
+    cwd = str(pathlib.Path.cwd().resolve())
+    if cwd not in sys.path:
+        sys.path.insert(0, cwd)
+
+    loader = unittest.TestLoader()
+    suite = unittest.TestSuite()
     for f in files:
+        mod_name = _path_to_module(f)
         try:
-            rel = f.resolve().relative_to(cwd.resolve())
-        except ValueError:
-            rel = f
-        mod = ".".join(rel.with_suffix("").parts)
-        mods.append(mod)
-    cmd = [sys.executable, "-m", "unittest"]
-    if verbose:
-        cmd.append("-v")
-    cmd.extend(mods)
-    print(f"{C_DIM}$ {' '.join(cmd)}{C_RESET}", flush=True)
-    return subprocess.call(cmd)
+            mod = importlib.import_module(mod_name)
+            suite.addTests(loader.loadTestsFromModule(mod))
+        except Exception as e:
+            print(f"{C_RED}pyst: failed to load {mod_name}: {e}{C_RESET}")
+            return 2
+
+    runner = unittest.TextTestRunner(verbosity=(2 if verbose else 1),
+                                     stream=sys.stderr)
+    started = time.perf_counter()
+    result = runner.run(suite)
+    duration = time.perf_counter() - started
+
+    total = result.testsRun
+    failed = len(result.failures) + len(result.errors)
+    skipped = len(result.skipped)
+    passed = total - failed - skipped
+    rate = round((passed / total) * 100, 1) if total else 0.0
+    rate_color = (C_GREEN if rate >= 100 else C_YELLOW if rate >= 80
+                  else C_RED)
+
+    bar = "=" * 80
+    print()
+    print(f"{C_CYAN}{bar}{C_RESET}")
+    print(f"{rate_color}{C_BOLD}TEST SUMMARY: {rate}%{C_RESET}")
+    print(f"{C_CYAN}{bar}{C_RESET}")
+    print(f"{C_DIM}Total Tests:{C_RESET}   {total}")
+    print(f"{C_GREEN}Passed:{C_RESET}        {passed}")
+    print(f"{C_RED if failed else C_DIM}Failed:{C_RESET}        {failed}")
+    print(f"{C_YELLOW}Skipped:{C_RESET}       {skipped}")
+    print(f"{C_DIM}Duration:{C_RESET}      {duration:.2f}s")
+    if failed:
+        print()
+        print(f"{C_RED}Failed tests:{C_RESET}")
+        for tc, _ in result.failures[:15]:
+            print(f"  {C_RED}- FAIL  {tc}{C_RESET}")
+        for tc, _ in result.errors[:15]:
+            print(f"  {C_RED}- ERROR {tc}{C_RESET}")
+    print(f"{C_CYAN}{bar}{C_RESET}")
+    return 0 if failed == 0 else 1
 
 
 # ---------- multi-python fan-out --------------------------------------------
@@ -204,7 +256,7 @@ def build_argparser() -> argparse.ArgumentParser:
                    help="Substring to exclude from paths (repeatable).")
     p.add_argument("--tree", action="store_true",
                    help="Print discovered tests grouped by tier; don't run.")
-    p.add_argument("--all-pythons", action="store_true",
+    p.add_argument("--all-pythons", "-a", action="store_true",
                    help="Run the matched suite across every Python on the box.")
     p.add_argument("--runner", choices=("auto", "pytest", "unittest"),
                    default="auto", help="Test runner backend (default: auto).")
@@ -237,9 +289,19 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{C_DIM}  scanned {len(files)} file(s) under {root}{C_RESET}")
         return 2
 
-    print(f"{C_BOLD}pyst v{__version__}{C_RESET} — {len(matched)} file(s) matched")
+    # psst-style banner
+    print(f"{C_CYAN}⚙️  TESTER = pyst:{C_RESET} {C_GREEN}ON{C_RESET}")
+    print(f"{C_DIM}Invoking Extended Test Intelligence...{C_RESET}\n")
+    print(f"{C_CYAN}🧪 pyst v{__version__} — {len(matched)} file(s) matched{C_RESET}")
+    if args.patterns:
+        print(f"{C_DIM}  patterns: {' '.join(args.patterns)}{C_RESET}")
+    print(f"\n{C_GREEN}Selected tests:{C_RESET}")
     for f in matched:
-        print(f"  {C_DIM}• {classify(f):<11}{C_RESET} {f}")
+        tier = classify(f)
+        col = (C_GREEN if tier == "smoke" else C_CYAN if tier == "unit"
+               else C_YELLOW if tier == "integration" else C_DIM)
+        print(f"  {col}✓ [{tier:<11}]{C_RESET} {C_DIM}{f.name}{C_RESET}")
+    print()
 
     # Multi-Python fan-out
     if args.all_pythons:
@@ -254,7 +316,7 @@ def main(argv: list[str] | None = None) -> int:
                    *args.patterns, *(["-v"] if args.verbose else [])]
             rc = subprocess.call(cmd, env={**os.environ, "PYST_MODE": "OFF_RECURSE"})
             results.append((py, rc))
-        print(f"\n{C_BOLD}━━ summary{C_RESET}")
+        print(f"\n{C_BOLD}━━ multi-python summary{C_RESET}")
         for py, rc in results:
             tag = f"{C_GREEN}PASS{C_RESET}" if rc == 0 else f"{C_RED}FAIL ({rc}){C_RESET}"
             print(f"  {tag}  {py}")
