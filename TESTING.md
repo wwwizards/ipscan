@@ -94,10 +94,12 @@ python -m unittest test_ipscan -v *>&1 | Tee-Object "testrun-Windows-$(python --
 
 | Platform | Python | Status | Notes |
 |---|---|---|---|
-| Windows 11 | 3.14.5 | ✅ 15/15 | v0.9.1 baseline |
-| Windows 11 | 3.12.x | 🟡 expected pass | not yet re-run on 3.12 post-patch |
-| macOS | 3.12+ | 🟡 expected pass | unit tests platform-mock; needs real-host smoke |
-| Linux | 3.10+ | 🟡 expected pass | unit tests platform-mock; needs real-host smoke |
+| Windows 11 | 3.14.5 | ✅ 15/15 | v0.9.1 baseline; also passes elevated; perf slower than 3.12 |
+| Windows 11 | 3.12.0 | ✅ 15/15 | non-elevated + elevated, 2026-06-03 |
+| Windows Server 2022 | 3.14.5 | ✅ 15/15 | 2026-06-03 |
+| macOS | 3.12.12 | ✅ 15/15 | non-elevated, 2026-06-03 |
+| Windows 10 | 3.12.x | 🟡 pending | |
+| Linux | 3.10+ | 🟡 pending | original complainer to validate |
 
 Legend: ✅ verified · 🟡 expected based on logic + mocked tests · ❌ known broken
 
