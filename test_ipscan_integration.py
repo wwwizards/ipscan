@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
 """ipscan INTEGRATION tests — real network, opt-in.
 
-Gated by env var so CI / casual `pyst` runs don't hit the network or
-prompt for elevation. Set RUN_INTEGRATION_TESTS=1 to enable.
+Gated by env var so CI / casual ``pyst`` runs don't hit the network or
+prompt for elevation. Set ``RUN_INTEGRATION_TESTS=1`` to enable.
 
-Run: $env:RUN_INTEGRATION_TESTS=1; python -m unittest test_ipscan_integration -v
-     pyst integration
+:SCRIPT:   test_ipscan_integration.py
+:PURPOSE:  Real-network integration coverage — opt-in via env var.
+:REQUIRES: Python 3.9+. stdlib only. ``RUN_INTEGRATION_TESTS=1``.
+:COMPANY:  LogicWizards.NYC <LogicWizards.NYC>
+:LICENSE:  MIT
+
+Run::
+
+    $env:RUN_INTEGRATION_TESTS=1; python -m unittest test_ipscan_integration -v
+    pyst integration
 """
 import os
 import unittest

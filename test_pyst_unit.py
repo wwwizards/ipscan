@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
 """pyst UNIT tests — discovery, classification, fuzzy matching, py-list parsing.
 
-Run: python -m unittest test_pyst_unit -v
-     pyst unit pyst
+:SCRIPT:   test_pyst_unit.py
+:PURPOSE:  Mocked, deterministic unit coverage for pyst internals.
+:REQUIRES: Python 3.9+. stdlib only.
+:COMPANY:  LogicWizards.NYC <LogicWizards.NYC>
+:LICENSE:  MIT
+
+Run::
+
+    python -m unittest test_pyst_unit -v
+    pyst unit pyst
 """
 import pathlib
 import tempfile

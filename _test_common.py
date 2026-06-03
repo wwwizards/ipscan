@@ -1,7 +1,14 @@
 """Shared test fixtures for ipscan + pyst suites.
 
-Stdlib only. Imported by every `test_*_<tier>.py` so the env header,
+Stdlib only. Imported by every ``test_*_<tier>.py`` so the env header,
 SUT loader, and admin probe live in one place.
+
+:SCRIPT:   _test_common.py
+:PURPOSE:  Shared test fixtures + env header / footer for ipscan + pyst.
+:REQUIRES: Python 3.9+. stdlib only.
+:CREATED:  2026-06-03 BY Joe Negron <Joe@LogicWizards.NYC>
+:COMPANY:  LogicWizards.NYC <LogicWizards.NYC>
+:LICENSE:  MIT
 """
 import datetime
 import importlib.util

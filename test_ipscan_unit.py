@@ -2,13 +2,22 @@
 """ipscan UNIT tests — mocked, deterministic, no real I/O.
 
 Covers the v0.9.1 regression bugs:
-  - cross-platform ping flag building (Windows -w ms vs BSD -W ms vs Linux -W sec)
-  - Py3.14 socket.timeout removal (TimeoutError aliasing)
-  - missing ping binary handling
-  - OS inference + reverse DNS error paths
 
-Run: python -m unittest test_ipscan_unit -v
-     pyst unit
+- cross-platform ping flag building (Windows -w ms vs BSD -W ms vs Linux -W sec)
+- Py3.14 socket.timeout removal (TimeoutError aliasing)
+- missing ping binary handling
+- OS inference + reverse DNS error paths
+
+:SCRIPT:   test_ipscan_unit.py
+:PURPOSE:  Mocked unit coverage for ipscan internals.
+:REQUIRES: Python 3.9+. stdlib only.
+:COMPANY:  LogicWizards.NYC <LogicWizards.NYC>
+:LICENSE:  MIT
+
+Run::
+
+    python -m unittest test_ipscan_unit -v
+    pyst unit
 """
 import socket
 import unittest

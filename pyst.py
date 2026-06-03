@@ -1,31 +1,34 @@
 #!/usr/bin/env python3
-# ----------------------------------------------------------------------------
-# SCRIPT: pyst.py
-# ----------------------------------------------------------------------------
-#  PURPOSE: Smart Python test runner with fuzzy pattern matching + tiering.
-# ABSTRACT: Python's companion to PowerShell's `psst`. Discovers test_*.py
-#           files in a directory tree, classifies them by tier suffix
-#           (smoke / sanity / unit / integration), and runs subsets matched
-#           by fuzzy patterns or tier names. Auto-prefers pytest if installed,
-#           falls back to stdlib unittest. Multi-Python fan-out via py -0p.
-# REQUIRES: Python 3.9+. stdlib only (pytest optional).
-#  CREATED: 2026-06-03 BY: Joe Negron <Joe@LogicWizards.NYC>
-#  COMPANY: LogicWizards.NYC <LogicWizards.NYC>
-#  VERSION: 0.1.1
-#  LICENSE: MIT
-#  USAGE:
-#     pyst                       # all tests
-#     pyst smoke                 # tier match: test_*_smoke.py
-#     pyst unit ipscan           # AND-match: test_ipscan_unit.py
-#     pyst --tree                # show discovered tests, grouped by tier
-#     pyst -a smoke              # --all-pythons: fan-out across every Python
-#     PYST_MODE=OFF pyst smoke   # passthrough — raw runner, no pyst logic
-# ----------------------------------------------------------------------------
-"""pyst — Python's smart test runner. Companion to PowerShell's psst."""
+"""pyst — Python's smart test runner. Companion to PowerShell's psst.
+
+:SCRIPT:   pyst.py
+:PURPOSE:  Smart Python test runner with fuzzy pattern matching + tiering.
+:ABSTRACT: Python's companion to PowerShell's ``psst``. Discovers
+           ``test_*.py`` files in a directory tree, classifies them by tier
+           suffix (smoke / sanity / unit / integration), and runs subsets
+           matched by fuzzy patterns or tier names. Auto-prefers pytest if
+           installed, falls back to stdlib unittest. Multi-Python fan-out
+           via ``py -0p``.
+:REQUIRES: Python 3.9+. stdlib only (pytest optional).
+:CREATED:  2026-06-03 BY Joe Negron <Joe@LogicWizards.NYC>
+:COMPANY:  LogicWizards.NYC <LogicWizards.NYC>
+:VERSION:  0.1.2
+:LICENSE:  MIT
+
+Usage::
+
+    pyst                       # all tests
+    pyst smoke                 # tier match: test_*_smoke.py
+    pyst unit ipscan           # AND-match: test_ipscan_unit.py
+    pyst --tree                # show discovered tests, grouped by tier
+    pyst -a smoke              # --all-pythons: fan-out across every Python
+    PYST_MODE=OFF pyst smoke   # passthrough — raw runner, no pyst logic
+"""
 from __future__ import annotations
 
 import argparse
 import importlib
+import itertools
 import os
 import pathlib
 import re
@@ -36,7 +39,7 @@ import time
 import unittest
 from typing import Iterable
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 # Reconfigure stdout/stderr to UTF-8 so emoji + box-drawing don't crash on
 # Windows cp1252 consoles (default for cmd.exe / pwsh on en-US Windows).
@@ -129,7 +132,96 @@ def _path_to_module(p: pathlib.Path) -> str:
     return ".".join(rel.with_suffix("").parts)
 
 
-def run_with_unittest(files: list[pathlib.Path], verbose: bool) -> int:
+# ASCII fallback used on cp1252 / dumb consoles. Modern Win Terminal +
+# pwsh handle the Unicode set fine after our utf-8 reconfigure above.
+_SPINNER_GLYPHS_UNI = ("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏")
+_SPINNER_GLYPHS_ASCII = ("|", "/", "-", "\\")
+_CLOBBER = "\r" + " " * 100 + "\r"
+
+
+class _SpinnerResult(unittest.TextTestResult):
+    """TestResult that animates a single-line spinner per running test.
+
+    Replaces the default dot-progress with `[N/total] glyph short_name`,
+    overwritten in place via \\r. On failure/error/skip, prints a one-line
+    status above the spinner so triage info isn't lost.
+    """
+
+    def __init__(self, stream, descriptions, verbosity, total: int = 0,
+                 use_unicode: bool = True):
+        super().__init__(stream, descriptions, verbosity)
+        self._total = total
+        self._index = 0
+        glyphs = _SPINNER_GLYPHS_UNI if use_unicode else _SPINNER_GLYPHS_ASCII
+        self._glyphs = itertools.cycle(glyphs)
+        self._last_line_len = 0
+
+    def _short(self, test) -> str:
+        try:
+            cls = test.__class__.__name__
+            return f"{cls}.{test._testMethodName}"
+        except Exception:
+            return str(test)
+
+    def _write_status(self, test, color: str = C_CYAN) -> None:
+        if not self.stream:
+            return
+        glyph = next(self._glyphs)
+        label = self._short(test)
+        # truncate label to keep within ~80 cols
+        max_label = 60
+        if len(label) > max_label:
+            label = label[: max_label - 1] + "…"
+        line = (f"{_CLOBBER}{C_DIM}[{self._index}/{self._total}]{C_RESET} "
+                f"{color}{glyph}{C_RESET} {label}")
+        try:
+            self.stream.write(line)
+            self.stream.flush()
+        except UnicodeEncodeError:
+            ascii_line = line.encode("ascii", "replace").decode("ascii")
+            self.stream.write(ascii_line)
+            self.stream.flush()
+        self._last_line_len = len(line)
+
+    def _emit_above(self, text: str) -> None:
+        """Clear current spinner line, print a status, leave cursor ready."""
+        if not self.stream:
+            return
+        self.stream.write(_CLOBBER)
+        self.stream.write(text + "\n")
+        self.stream.flush()
+
+    def startTest(self, test):  # noqa: N802 (unittest API)
+        self._index += 1
+        # call grandparent to skip TextTestResult dot-output
+        unittest.TestResult.startTest(self, test)
+        self._write_status(test)
+
+    def addSuccess(self, test):  # noqa: N802
+        unittest.TestResult.addSuccess(self, test)
+
+    def addError(self, test, err):  # noqa: N802
+        unittest.TestResult.addError(self, test, err)
+        self._emit_above(f"  {C_RED}✗ ERROR {self._short(test)}{C_RESET}")
+
+    def addFailure(self, test, err):  # noqa: N802
+        unittest.TestResult.addFailure(self, test, err)
+        self._emit_above(f"  {C_RED}✗ FAIL  {self._short(test)}{C_RESET}")
+
+    def addSkip(self, test, reason):  # noqa: N802
+        unittest.TestResult.addSkip(self, test, reason)
+        self._emit_above(f"  {C_YELLOW}○ SKIP  {self._short(test)}{C_DIM} ({reason}){C_RESET}")
+
+    def stopTestRun(self):  # noqa: N802
+        super().stopTestRun()
+        # clear spinner line on exit
+        if self.stream:
+            self.stream.write(_CLOBBER)
+            self.stream.flush()
+
+
+def run_with_unittest(files: list[pathlib.Path], verbose: bool,
+                      spinner: bool = True) -> int:
     """In-process unittest run — captures counts for the psst-style summary."""
     cwd = str(pathlib.Path.cwd().resolve())
     if cwd not in sys.path:
@@ -146,10 +238,30 @@ def run_with_unittest(files: list[pathlib.Path], verbose: bool) -> int:
             print(f"{C_RED}pyst: failed to load {mod_name}: {e}{C_RESET}")
             return 2
 
-    runner = unittest.TextTestRunner(verbosity=(2 if verbose else 1),
-                                     stream=sys.stderr)
+    total = suite.countTestCases()
+
+    # Spinner only when output is interactive and we're not in -v (which prints
+    # one line per test — the spinner would fight that).
+    use_spinner = spinner and not verbose and sys.stderr.isatty()
     started = time.perf_counter()
-    result = runner.run(suite)
+    if use_spinner:
+        # Detect whether the console can handle Unicode braille glyphs. The
+        # utf-8 reconfigure at module load makes this work on modern Windows
+        # Terminal + pwsh; legacy conhost/cp1252 still trips on rare cases,
+        # so we let _SpinnerResult catch UnicodeEncodeError per write.
+        use_unicode = (sys.stdout.encoding or "").lower().startswith("utf")
+
+        def _factory(stream, descriptions, verbosity):
+            return _SpinnerResult(stream, descriptions, verbosity,
+                                  total=total, use_unicode=use_unicode)
+
+        runner = unittest.TextTestRunner(verbosity=1, stream=sys.stderr,
+                                         resultclass=_factory)
+        result = runner.run(suite)
+    else:
+        runner = unittest.TextTestRunner(verbosity=(2 if verbose else 1),
+                                         stream=sys.stderr)
+        result = runner.run(suite)
     duration = time.perf_counter() - started
 
     total = result.testsRun
@@ -261,7 +373,9 @@ def build_argparser() -> argparse.ArgumentParser:
     p.add_argument("--runner", choices=("auto", "pytest", "unittest"),
                    default="auto", help="Test runner backend (default: auto).")
     p.add_argument("-v", "--verbose", action="store_true",
-                   help="Verbose unittest output (-v).")
+                   help="Verbose unittest output (-v). Disables spinner.")
+    p.add_argument("--no-spinner", action="store_true",
+                   help="Disable the per-test progress spinner.")
     p.add_argument("--version", action="version", version=f"pyst {__version__}")
     return p
 
@@ -330,7 +444,8 @@ def main(argv: list[str] | None = None) -> int:
     use_pytest = (args.runner == "pytest") or (args.runner == "auto" and _have_pytest())
     if use_pytest:
         return run_with_pytest(matched, extra)
-    return run_with_unittest(matched, verbose=args.verbose)
+    return run_with_unittest(matched, verbose=args.verbose,
+                             spinner=not args.no_spinner)
 
 
 if __name__ == "__main__":

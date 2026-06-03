@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
 """pyst SMOKE tests — import + version + arg-parser sanity.
 
-Run: python -m unittest test_pyst_smoke -v
-     pyst smoke pyst
+:SCRIPT:   test_pyst_smoke.py
+:PURPOSE:  Fastest tier for pyst itself — import, version, argparser.
+:REQUIRES: Python 3.9+. stdlib only.
+:COMPANY:  LogicWizards.NYC <LogicWizards.NYC>
+:LICENSE:  MIT
+
+Run::
+
+    python -m unittest test_pyst_smoke -v
+    pyst smoke pyst
 """
 import unittest
 

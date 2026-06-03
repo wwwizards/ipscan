@@ -2,8 +2,17 @@
 """ipscan SMOKE tests — fastest tier. Import + python-version sanity.
 
 Tier policy: no mocks, no network, no subprocess. <100ms total.
-Run: python -m unittest test_ipscan_smoke -v
-     pyst smoke
+
+:SCRIPT:   test_ipscan_smoke.py
+:PURPOSE:  Fastest tier — import + Python-version sanity for ipscan.
+:REQUIRES: Python 3.9+. stdlib only.
+:COMPANY:  LogicWizards.NYC <LogicWizards.NYC>
+:LICENSE:  MIT
+
+Run::
+
+    python -m unittest test_ipscan_smoke -v
+    pyst smoke
 """
 import sys
 import unittest
