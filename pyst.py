@@ -12,7 +12,7 @@
 :REQUIRES: Python 3.9+. stdlib only (pytest optional).
 :CREATED:  2026-06-03 BY Joe Negron <Joe@LogicWizards.NYC>
 :COMPANY:  LogicWizards.NYC <LogicWizards.NYC>
-:VERSION:  0.1.3
+:VERSION:  0.1.4
 :LICENSE:  MIT
 
 Usage::
@@ -41,7 +41,7 @@ import time
 import unittest
 from typing import Iterable
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 
 # Reconfigure stdout/stderr to UTF-8 so emoji + box-drawing don't crash on
 # Windows cp1252 consoles (default for cmd.exe / pwsh on en-US Windows).
@@ -255,13 +255,18 @@ def run_with_unittest(files: list[pathlib.Path], verbose: bool,
             stream=sys.stderr,
             use_unicode=use_unicode,
         )
+        # Redirect stdout AND stderr into the same buffer during the run so
+        # tests that print() (env headers, debug breadcrumbs) don't shred the
+        # spinner's single-line ownership. Buffer is replayed after stop().
+        saved_stdout, saved_stderr = sys.stdout, sys.stderr
         spin.start()
         try:
+            sys.stdout = buf
+            sys.stderr = buf
             result = runner.run(suite)
         finally:
+            sys.stdout, sys.stderr = saved_stdout, saved_stderr
             spin.stop()
-        # Replay buffered runner output (the dots + tracebacks) so users
-        # still see the standard unittest report between spinner and summary.
         sys.stderr.write(buf.getvalue())
         sys.stderr.flush()
     else:

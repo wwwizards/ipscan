@@ -1,0 +1,24 @@
+pyst v0.1.4 — fix spinner interleave on stdout
+
+## Problem
+Spinner was invisible / broken when test modules wrote to sys.stdout
+during runner.run() (e.g. setUpModule -> print_env_header()). The
+\r-overwrite line got scrolled off by interleaved output, making the
+spinner disappear entirely (especially noticeable on Win Server 2022).
+
+## Root cause
+Prior versions only redirected the TextTestRunner stream into a
+StringIO buffer. sys.stdout (and sys.stderr) remained live for the
+entire duration of runner.run(), so any print() calls inside test
+modules interleaved directly with the spinner's single-line ownership.
+
+## Fix
+In the use_spinner branch of run_with_unittest(), save and redirect
+BOTH sys.stdout and sys.stderr into the StringIO buffer for the full
+duration of runner.run(). Restore both before spin.stop(), then flush
+the buffer to the real stderr so test output still appears after the
+spinner clears.
+
+## Changed
+- pyst.py: saved_stdout/saved_stderr redirect wraps runner.run()
+- __version__ bumped to 0.1.4
