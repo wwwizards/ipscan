@@ -1,10 +1,27 @@
 # ipscan
 
-Cross-platform parallel IP/port scanner. Stdlib only. Single file.
+ABSTRACT: an extremely lightweight os-agnostic cross-platform parallel IP/port scanner. which requires `stdlib` only. It is a single file. You can clone the whole repo and try some of our other FREE tools, and/or just copy & paste the contents of [ipscan.py](ipscan.py) to your machine & run it with: 
+```
+python ipscan.py -h
+
+S /Users/jnegron9/DATA/miners/ipscan> python ./ipscan.py -h
+usage: ipscan.py [-h] [-q] [-t THREADS] ip_range [ip_range ...]
+
+Parallel IP Scanner
+
+positional arguments:
+  ip_range              Space-separated list of subnet/CIDR addresses (e.g., '192.168.0.0/24 10.0.0.0/16')
+
+options:
+  -h, --help            show this help message and exit
+  -q, --quiet           Suppress progress indicators & emit JSON only
+  -t THREADS, --threads THREADS
+                        Number of threads for parallel scanning
+``` 
 
 ## What's new in v0.9.1
 
-Users reported `ipscan.py` failing on Python 3.12 / 3.14 (post-CVE patches) and never working right on macOS. Audit found three real bugs:
+Users reported `ipscan.py` failing on Python 3.12 / 3.14 (post-CVE patches) and never working right on Win32 based systems. Audit found three real bugs:
 
 1. **`socket.timeout` removed in Py3.14** — `is_port_active()` caught it by name; throws `NameError` on 3.14. Fixed: use canonical `TimeoutError`.
 2. **Linux-only ping flags** — `-c` / `-W (sec)` hardcoded. Windows needs `-n` / `-w (ms)`; macOS BSD ping `-W` is **ms not sec**, so the overlap "worked" on Mac but with a 1000× wrong timeout. Fixed: per-platform flag builder.
@@ -33,7 +50,10 @@ python -m unittest test_ipscan -v
 
 See [`TESTING.md`](TESTING.md) for the full coverage matrix, latest run output, and platform × Python version validation status.
 
-## pyst — smart test runner (PRE-RELEASE BONUS)
+---
+## (PRE-RELEASE PREVIEW BONUS)
+---
+### pyst — the smart test runner 
 
 `pyst.py` ships alongside `ipscan.py` as a **pre-release bonus** while it
 matures. Think of it as Python's answer to PowerShell's `psst`: fuzzy

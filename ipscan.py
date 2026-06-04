@@ -1,33 +1,30 @@
 #!/usr/bin/env python3
-"""ipscan — Poor Man's parallel IP & standard-port scanner (stdlib-only).
-
-:SCRIPT:   ipscan.py
-:PURPOSE:  Poor Man's parallel IP & standard-port scanner (stdlib-only).
-:ABSTRACT: Brute-force scans a list of CIDR subnets for ICMP-responsive
-           hosts, then probes a curated set of standard TCP ports on the
-           live ones. Pure stdlib — no pip dependencies. Cross-platform:
-           Windows / Linux / macOS. Outputs human-readable text or JSON
-           (``-q``).
-:REQUIRES: Python 3.9+ (tested on 3.10 / 3.12 / 3.14). No external packages.
-:CREATED:  2023-07-13 BY Joe Negron <github.com/wwwizards>
-:COMPANY:  LogicWizards.NYC <LogicWizards.NYC>
-:VERSION:  0.9.1
-:LICENSE:  MIT
-
-.. WARNING::
-   Unauthorized scanning can be illegal. Get written permission from the
-   network owner (or somebody of competent jurisdiction empowering you to
-   do so) before scanning IP ranges you do not own. See
-   https://nmap.org/book/legal-issues.html. Network probing / port-scanning
-   tools are only permitted on your own residential home network, or on
-   networks where you have explicit authorization from the destination host
-   and/or network administrator.
-
-Usage::
-
-    python ipscan.py "192.168.0.0/24 10.0.0.0/16"
-    python ipscan.py 10.0.0.0/24 -t 128 -q > scan.json
 """
+# --------------------------------------------------------------------------
+# SCRIPT:   ipscan.py
+# --------------------------------------------------------------------------
+# ABSTRACT: Poor Man's parallel IP & standard-port scanner (stdlib-only).
+#     Brute-force scans a list of CIDR subnets for ICMP-responsive hosts,
+#     then probes a curated set of standard TCP ports on the live ones.
+#     Pure stdlib — no pip dependencies. Cross-platform: Windows / Linux /
+#     macOS. Outputs human-readable text or JSON (-q).
+#
+# USAGE:    python ipscan.py "192.168.0.0/24 10.0.0.0/16"
+#           python ipscan.py 10.0.0.0/24 -t 128 -q > scan.json
+#
+# REQUIRES: Python 3.9+ (tested on 3.10 / 3.12 / 3.14). No external packages.
+# CREATED:  2023-07-13 BY: Joe Negron
+# VERSION:  0.9.1
+# LICENSE:  MIT
+#
+# WARNING:  Unauthorized scanning can be illegal. Get written permission from
+#     the network owner (or somebody of competent jurisdiction empowering you
+#     to do so) before scanning IP ranges you do not own. See
+#     https://nmap.org/book/legal-issues.html. Network probing / port-scanning
+#     tools are only permitted on your own residential home network, or on
+#     networks where you have explicit authorization from the destination host
+#     and/or network administrator.
+# --------------------------------------------------------------------------
 #
 # CHANGELOG (v0.9.1 — 2026-06-03, Py3.14 + cross-platform fixes):
 #   - FIX: socket.timeout removed in Py3.14 → use TimeoutError
@@ -40,7 +37,7 @@ Usage::
 #   - FIX: duplicate FG_RED definition; duplicate 5896 in windows_tcp
 #   - CHORE: platform import is now actually used
 #------------------------------------------------------------------------------
-
+"""
 import argparse
 import ipaddress
 import itertools
