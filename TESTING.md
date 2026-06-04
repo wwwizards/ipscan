@@ -123,3 +123,316 @@ Each historical bug becomes a permanent test. The pattern:
 4. Add a row to the **Coverage matrix** above with a short "why it matters" note.
 
 This keeps `TESTING.md` synchronized with the suite and gives reviewers (and future-you) a one-page audit trail of what's been actively defended against.
+[36m⚙️  TESTER = pyst:[0m [32mON[0m
+[2mInvoking Extended Test Intelligence...[0m
+
+[36m🧪 pyst v0.1.4 — 5 file(s) matched[0m
+
+[32mSelected tests:[0m
+  [33m✓ [integration][0m [2mtest_ipscan_integration.py[0m
+  [32m✓ [smoke      ][0m [2mtest_ipscan_smoke.py[0m
+  [36m✓ [unit       ][0m [2mtest_ipscan_unit.py[0m
+  [32m✓ [smoke      ][0m [2mtest_pyst_smoke.py[0m
+  [36m✓ [unit       ][0m [2mtest_pyst_unit.py[0m
+
+
+[36m================================================================================[0m
+[33m[1mTEST SUMMARY: 94.1%[0m
+[36m================================================================================[0m
+[2mTotal Tests:[0m   34
+[32mPassed:[0m        32
+[2mFailed:[0m        0
+[33mSkipped:[0m       2
+[2mDuration:[0m      0.04s
+[36m================================================================================[0m
+[36m⚙️  TESTER = pyst:[0m [32mON[0m
+[2mInvoking Extended Test Intelligence...[0m
+
+[36m🧪 pyst v0.1.4 — 5 file(s) matched[0m
+
+[32mSelected tests:[0m
+  [33m✓ [integration][0m [2mtest_ipscan_integration.py[0m
+  [32m✓ [smoke      ][0m [2mtest_ipscan_smoke.py[0m
+  [36m✓ [unit       ][0m [2mtest_ipscan_unit.py[0m
+  [32m✓ [smoke      ][0m [2mtest_pyst_smoke.py[0m
+  [36m✓ [unit       ][0m [2mtest_pyst_unit.py[0m
+
+
+[36m================================================================================[0m
+[33m[1mTEST SUMMARY: 94.1%[0m
+[36m================================================================================[0m
+[2mTotal Tests:[0m   34
+[32mPassed:[0m        32
+[2mFailed:[0m        0
+[33mSkipped:[0m       2
+[2mDuration:[0m      0.03s
+[36m================================================================================[0m
+[36m⚙️  TESTER = pyst:[0m [32mON[0m
+[2mInvoking Extended Test Intelligence...[0m
+
+[36m🧪 pyst v0.1.4 — 5 file(s) matched[0m
+
+[32mSelected tests:[0m
+  [33m✓ [integration][0m [2mtest_ipscan_integration.py[0m
+  [32m✓ [smoke      ][0m [2mtest_ipscan_smoke.py[0m
+  [36m✓ [unit       ][0m [2mtest_ipscan_unit.py[0m
+  [32m✓ [smoke      ][0m [2mtest_pyst_smoke.py[0m
+  [36m✓ [unit       ][0m [2mtest_pyst_unit.py[0m
+
+
+[36m================================================================================[0m
+[33m[1mTEST SUMMARY: 94.1%[0m
+[36m================================================================================[0m
+[2mTotal Tests:[0m   34
+[32mPassed:[0m        32
+[2mFailed:[0m        0
+[33mSkipped:[0m       2
+[2mDuration:[0m      0.03s
+[36m================================================================================[0m
+[36m⚙️  TESTER = pyst:[0m [32mON[0m
+[2mInvoking Extended Test Intelligence...[0m
+
+[36m🧪 pyst v0.1.4 — 5 file(s) matched[0m
+
+[32mSelected tests:[0m
+  [33m✓ [integration][0m [2mtest_ipscan_integration.py[0m
+  [32m✓ [smoke      ][0m [2mtest_ipscan_smoke.py[0m
+  [36m✓ [unit       ][0m [2mtest_ipscan_unit.py[0m
+  [32m✓ [smoke      ][0m [2mtest_pyst_smoke.py[0m
+  [36m✓ [unit       ][0m [2mtest_pyst_unit.py[0m
+
+
+[36m================================================================================[0m
+[33m[1mTEST SUMMARY: 94.1%[0m
+[36m================================================================================[0m
+[2mTotal Tests:[0m   34
+[32mPassed:[0m        32
+[2mFailed:[0m        0
+[33mSkipped:[0m       2
+[2mDuration:[0m      0.03s
+[36m================================================================================[0m
+[36m⚙️  TESTER = pyst:[0m [32mON[0m
+[2mInvoking Extended Test Intelligence...[0m
+
+[36m🧪 pyst v0.1.4 — 5 file(s) matched[0m
+
+[32mSelected tests:[0m
+  [33m✓ [integration][0m [2mtest_ipscan_integration.py[0m
+  [32m✓ [smoke      ][0m [2mtest_ipscan_smoke.py[0m
+  [36m✓ [unit       ][0m [2mtest_ipscan_unit.py[0m
+  [32m✓ [smoke      ][0m [2mtest_pyst_smoke.py[0m
+  [36m✓ [unit       ][0m [2mtest_pyst_unit.py[0m
+
+
+[36m================================================================================[0m
+[33m[1mTEST SUMMARY: 94.1%[0m
+[36m================================================================================[0m
+[2mTotal Tests:[0m   34
+[32mPassed:[0m        32
+[2mFailed:[0m        0
+[33mSkipped:[0m       2
+[2mDuration:[0m      0.03s
+[36m================================================================================[0m
+[36m⚙️  TESTER = pyst:[0m [32mON[0m
+[2mInvoking Extended Test Intelligence...[0m
+
+[36m🧪 pyst v0.1.4 — 5 file(s) matched[0m
+
+[32mSelected tests:[0m
+  [33m✓ [integration][0m [2mtest_ipscan_integration.py[0m
+  [32m✓ [smoke      ][0m [2mtest_ipscan_smoke.py[0m
+  [36m✓ [unit       ][0m [2mtest_ipscan_unit.py[0m
+  [32m✓ [smoke      ][0m [2mtest_pyst_smoke.py[0m
+  [36m✓ [unit       ][0m [2mtest_pyst_unit.py[0m
+
+
+[36m================================================================================[0m
+[33m[1mTEST SUMMARY: 94.1%[0m
+[36m================================================================================[0m
+[2mTotal Tests:[0m   34
+[32mPassed:[0m        32
+[2mFailed:[0m        0
+[33mSkipped:[0m       2
+[2mDuration:[0m      0.03s
+[36m================================================================================[0m
+[36m⚙️  TESTER = pyst:[0m [32mON[0m
+[2mInvoking Extended Test Intelligence...[0m
+
+[36m🧪 pyst v0.1.4 — 5 file(s) matched[0m
+
+[32mSelected tests:[0m
+  [33m✓ [integration][0m [2mtest_ipscan_integration.py[0m
+  [32m✓ [smoke      ][0m [2mtest_ipscan_smoke.py[0m
+  [36m✓ [unit       ][0m [2mtest_ipscan_unit.py[0m
+  [32m✓ [smoke      ][0m [2mtest_pyst_smoke.py[0m
+  [36m✓ [unit       ][0m [2mtest_pyst_unit.py[0m
+
+
+[36m================================================================================[0m
+[33m[1mTEST SUMMARY: 94.1%[0m
+[36m================================================================================[0m
+[2mTotal Tests:[0m   34
+[32mPassed:[0m        32
+[2mFailed:[0m        0
+[33mSkipped:[0m       2
+[2mDuration:[0m      0.03s
+[36m================================================================================[0m
+[36m⚙️  TESTER = pyst:[0m [32mON[0m
+[2mInvoking Extended Test Intelligence...[0m
+
+[36m🧪 pyst v0.1.4 — 5 file(s) matched[0m
+
+[32mSelected tests:[0m
+  [33m✓ [integration][0m [2mtest_ipscan_integration.py[0m
+  [32m✓ [smoke      ][0m [2mtest_ipscan_smoke.py[0m
+  [36m✓ [unit       ][0m [2mtest_ipscan_unit.py[0m
+  [32m✓ [smoke      ][0m [2mtest_pyst_smoke.py[0m
+  [36m✓ [unit       ][0m [2mtest_pyst_unit.py[0m
+
+
+[36m================================================================================[0m
+[33m[1mTEST SUMMARY: 94.1%[0m
+[36m================================================================================[0m
+[2mTotal Tests:[0m   34
+[32mPassed:[0m        32
+[2mFailed:[0m        0
+[33mSkipped:[0m       2
+[2mDuration:[0m      0.03s
+[36m================================================================================[0m
+[36m⚙️  TESTER = pyst:[0m [32mON[0m
+[2mInvoking Extended Test Intelligence...[0m
+
+[36m🧪 pyst v0.1.4 — 5 file(s) matched[0m
+
+[32mSelected tests:[0m
+  [33m✓ [integration][0m [2mtest_ipscan_integration.py[0m
+  [32m✓ [smoke      ][0m [2mtest_ipscan_smoke.py[0m
+  [36m✓ [unit       ][0m [2mtest_ipscan_unit.py[0m
+  [32m✓ [smoke      ][0m [2mtest_pyst_smoke.py[0m
+  [36m✓ [unit       ][0m [2mtest_pyst_unit.py[0m
+
+
+[36m================================================================================[0m
+[33m[1mTEST SUMMARY: 94.1%[0m
+[36m================================================================================[0m
+[2mTotal Tests:[0m   34
+[32mPassed:[0m        32
+[2mFailed:[0m        0
+[33mSkipped:[0m       2
+[2mDuration:[0m      0.06s
+[36m================================================================================[0m
+[36m⚙️  TESTER = pyst:[0m [32mON[0m
+[2mInvoking Extended Test Intelligence...[0m
+
+[36m🧪 pyst v0.1.4 — 5 file(s) matched[0m
+
+[32mSelected tests:[0m
+  [33m✓ [integration][0m [2mtest_ipscan_integration.py[0m
+  [32m✓ [smoke      ][0m [2mtest_ipscan_smoke.py[0m
+  [36m✓ [unit       ][0m [2mtest_ipscan_unit.py[0m
+  [32m✓ [smoke      ][0m [2mtest_pyst_smoke.py[0m
+  [36m✓ [unit       ][0m [2mtest_pyst_unit.py[0m
+
+
+[36m================================================================================[0m
+[33m[1mTEST SUMMARY: 94.1%[0m
+[36m================================================================================[0m
+[2mTotal Tests:[0m   34
+[32mPassed:[0m        32
+[2mFailed:[0m        0
+[33mSkipped:[0m       2
+[2mDuration:[0m      0.02s
+[36m================================================================================[0m
+[36m⚙️  TESTER = pyst:[0m [32mON[0m
+[2mInvoking Extended Test Intelligence...[0m
+
+[36m🧪 pyst v0.1.4 — 5 file(s) matched[0m
+
+[32mSelected tests:[0m
+  [33m✓ [integration][0m [2mtest_ipscan_integration.py[0m
+  [32m✓ [smoke      ][0m [2mtest_ipscan_smoke.py[0m
+  [36m✓ [unit       ][0m [2mtest_ipscan_unit.py[0m
+  [32m✓ [smoke      ][0m [2mtest_pyst_smoke.py[0m
+  [36m✓ [unit       ][0m [2mtest_pyst_unit.py[0m
+
+
+[36m================================================================================[0m
+[33m[1mTEST SUMMARY: 94.1%[0m
+[36m================================================================================[0m
+[2mTotal Tests:[0m   34
+[32mPassed:[0m        32
+[2mFailed:[0m        0
+[33mSkipped:[0m       2
+[2mDuration:[0m      0.06s
+[36m================================================================================[0m
+[36m⚙️  TESTER = pyst:[0m [32mON[0m
+[2mInvoking Extended Test Intelligence...[0m
+
+[36m🧪 pyst v0.1.4 — 5 file(s) matched[0m
+
+[32mSelected tests:[0m
+  [33m✓ [integration][0m [2mtest_ipscan_integration.py[0m
+  [32m✓ [smoke      ][0m [2mtest_ipscan_smoke.py[0m
+  [36m✓ [unit       ][0m [2mtest_ipscan_unit.py[0m
+  [32m✓ [smoke      ][0m [2mtest_pyst_smoke.py[0m
+  [36m✓ [unit       ][0m [2mtest_pyst_unit.py[0m
+
+
+[1m━━ /opt/homebrew/bin/python3[0m
+
+[1m━━ /opt/homebrew/bin/python3-config[0m
+
+[1m━━ /opt/homebrew/bin/python3.10[0m
+
+[1m━━ /opt/homebrew/bin/python3.10-config[0m
+
+[1m━━ /opt/homebrew/bin/python3.11[0m
+
+[1m━━ /opt/homebrew/bin/python3.11-config[0m
+
+[1m━━ /opt/homebrew/bin/python3.12[0m
+
+[1m━━ /opt/homebrew/bin/python3.12-config[0m
+
+[1m━━ /opt/homebrew/bin/python3.13[0m
+
+[1m━━ /opt/homebrew/bin/python3.13-config[0m
+
+[1m━━ /opt/homebrew/bin/python3.14[0m
+
+[1m━━ /opt/homebrew/bin/python3.14-config[0m
+
+[1m━━ /usr/bin/python3[0m
+
+[1m━━ /usr/local/bin/python3[0m
+
+[1m━━ /usr/local/bin/python3-config[0m
+
+[1m━━ /usr/local/bin/python3-intel64[0m
+
+[1m━━ /usr/local/bin/python3.12[0m
+
+[1m━━ /usr/local/bin/python3.12-config[0m
+
+[1m━━ /usr/local/bin/python3.12-intel64[0m
+
+[1m━━ multi-python summary[0m
+  [32mPASS[0m  /opt/homebrew/bin/python3
+  [31mFAIL (1)[0m  /opt/homebrew/bin/python3-config
+  [32mPASS[0m  /opt/homebrew/bin/python3.10
+  [31mFAIL (1)[0m  /opt/homebrew/bin/python3.10-config
+  [32mPASS[0m  /opt/homebrew/bin/python3.11
+  [31mFAIL (1)[0m  /opt/homebrew/bin/python3.11-config
+  [32mPASS[0m  /opt/homebrew/bin/python3.12
+  [31mFAIL (1)[0m  /opt/homebrew/bin/python3.12-config
+  [32mPASS[0m  /opt/homebrew/bin/python3.13
+  [31mFAIL (1)[0m  /opt/homebrew/bin/python3.13-config
+  [32mPASS[0m  /opt/homebrew/bin/python3.14
+  [31mFAIL (1)[0m  /opt/homebrew/bin/python3.14-config
+  [32mPASS[0m  /usr/bin/python3
+  [32mPASS[0m  /usr/local/bin/python3
+  [31mFAIL (1)[0m  /usr/local/bin/python3-config
+  [32mPASS[0m  /usr/local/bin/python3-intel64
+  [32mPASS[0m  /usr/local/bin/python3.12
+  [31mFAIL (1)[0m  /usr/local/bin/python3.12-config
+  [32mPASS[0m  /usr/local/bin/python3.12-intel64
