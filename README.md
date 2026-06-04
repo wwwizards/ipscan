@@ -33,10 +33,41 @@ python -m unittest test_ipscan -v
 
 See [`TESTING.md`](TESTING.md) for the full coverage matrix, latest run output, and platform × Python version validation status.
 
+## pyst — smart test runner (PRE-RELEASE BONUS)
+
+`pyst.py` ships alongside `ipscan.py` as a **pre-release bonus** while it
+matures. Think of it as Python's answer to PowerShell's `psst`: fuzzy
+pattern matching, tier-based test discovery, and an animated spinner —
+all stdlib, no pip install required.
+
+```bash
+python pyst.py                  # run all tests
+python pyst.py smoke            # tier match: test_*_smoke.py
+python pyst.py unit ipscan      # AND-match: test_ipscan_unit.py
+python pyst.py --tree           # show discovered tests grouped by tier
+python pyst.py -a smoke         # fan-out across every Python on PATH
+PYST_MODE=OFF python pyst.py    # raw passthrough — no pyst logic
+```
+
+**Tiers** (matched by test filename suffix):
+
+| Suffix | Intent |
+|---|---|
+| `_smoke` | Fast pre-commit gate, no network |
+| `_unit` | Isolated logic, mocks where needed |
+| `_integration` | Live network / external deps |
+| `_sanity` | Post-deploy sanity checks |
+
+> **Pre-release caveat:** `pyst` is in active development (v0.1.4). The
+> API and tier conventions may shift before v1.0. It will likely graduate
+> into its own module once [pickaxe](https://github.com/wwwizards/pickaxe)
+> handles the heavy lifting for discovery and dependency wiring.
+
 ## Roadmap
 
 - **v0.9.1** (this) — Py3.14 + cross-platform fixes, regression suite.
 - **v0.9.2+** — IPv6 support, configurable port lists, JSONL streaming.
+- **pyst v1.0** — graduates to standalone module; pickaxe-powered discovery.
 
 ## License
 
