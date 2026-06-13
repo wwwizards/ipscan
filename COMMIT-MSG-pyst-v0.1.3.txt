@@ -1,0 +1,47 @@
+pyst v0.1.3: buffered spinner — works for pytest AND unittest
+
+WHAT
+- Replaced the per-test TextTestResult subclass with a generic
+  _BackgroundSpinner that animates while the test runner's output is
+  captured to a buffer.
+- run_with_unittest: TextTestRunner now writes to io.StringIO; spinner
+  rotates on stderr; buffer is flushed to stderr after run completes.
+  Standard unittest dot-progress + tracebacks are preserved, just
+  delayed until the run finishes.
+- run_with_pytest: subprocess.run captures stdout+stderr into memory;
+  spinner rotates on stderr; captured output flushed afterward.
+  pytest's full report (collection, dots, summary) prints intact.
+- Spinner shows: glyph + label + elapsed seconds (e.g. "running 34
+  unittest cases… (1.2s)"). Background thread ticks every 120ms so
+  animation is alive even when individual tests finish in microseconds.
+
+WHY
+- v0.1.2 spinner only animated under --runner unittest, and only on
+  startTest/addSuccess hooks — so 5 fast tests showed 5 frames in
+  ~250ms (visually invisible).
+- pytest path had no spinner at all — its own dots were the whole UX.
+- Capturing output gives the spinner exclusive control of the live
+  line, and unifies UX across both runners.
+
+GUARDS
+- Spinner skipped when stderr is not a TTY (CI, piped output) — output
+  flows through unbuffered as before.
+- Skipped under -v / --verbose (user explicitly asked for chatter).
+- Skipped via --no-spinner.
+- Unicode braille glyphs with ASCII fallback on UnicodeEncodeError.
+
+VALIDATION (Win11 + Py3.14.5, real terminal)
+- python pyst.py --runner unittest        → 34 tests, ~3.1s, spinner
+  visible, dots replayed, summary 94.1% (2 skipped integration tests)
+- python pyst.py --runner unittest -v     → no spinner, verbose names
+- python pyst.py --runner unittest --no-spinner  → no spinner
+- piped output (| Select-Object)          → spinner correctly skipped
+- pytest path                             → spinner ticks during run,
+  full pytest report flushed after
+
+UAT
+- Win10, Linux, macOS, Win Server 2025: rerun
+    pyst                       # default runner (pytest if installed)
+    pyst --runner unittest     # stdlib path
+  Confirm spinner is visible during the run and clears cleanly before
+  the captured output replays.

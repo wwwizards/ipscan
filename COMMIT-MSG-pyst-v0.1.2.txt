@@ -1,0 +1,48 @@
+pyst v0.1.2: per-test spinner + autodoc-friendly module headers
+
+WHAT
+- pyst: per-test progress spinner during in-process unittest runs.
+  Single-line `\r`-overwriting status: `[N/total] <glyph> <test_name>`.
+  Active by default when stderr is a TTY; suppressed under -v (verbose
+  already prints per-test names) and via new --no-spinner flag.
+  Glyphs use Unicode braille frames with ASCII fallback if the console
+  can't encode (UnicodeEncodeError caught per-write).
+  Failures / errors / skips emit a one-line marker ABOVE the spinner so
+  triage info isn't lost when the line is overwritten.
+
+- All .py files: structured module docstrings replace the boxed `#`
+  header blocks. PEP-257 + reST `:FIELD:` lines (SCRIPT / PURPOSE /
+  ABSTRACT / REQUIRES / CREATED / COMPANY / VERSION / LICENSE) so
+  Sphinx / pdoc / pdoc3 / VS Code hover all scrape the same metadata
+  the LogicWizards .ps1 header template captures. Shebangs preserved.
+
+WHY
+- Spinner: long unittest runs felt silent. ipscan's spinner pattern
+  was already proven cross-platform (v0.9.1) — port it home.
+- Headers: the `#`-comment block above a module docstring is invisible
+  to `help(module)`, Sphinx autodoc, pdoc, and IDE hover. Moving the
+  same fields into the docstring makes them queryable without losing
+  the LogicWizards house style.
+
+FILES
+- pyst.py 0.1.1 -> 0.1.2  (spinner + --no-spinner + structured docstring)
+- ipscan.py            (structured docstring; CHANGELOG kept as `#`)
+- _test_common.py      (structured docstring)
+- test_ipscan_smoke.py
+- test_ipscan_unit.py
+- test_ipscan_integration.py
+- test_pyst_smoke.py
+- test_pyst_unit.py
+
+VALIDATION
+- `python -c "import pyst"`     OK on Win11 + Py3.14.5
+- `python -m unittest test_pyst_smoke test_ipscan_smoke`  5/5 pass
+- Pylance: no new errors (existing optional `import pytest` warning
+  unrelated)
+
+UAT
+- Win10, Linux, macOS, Win Server 2025: please run
+    pyst                       # spinner enabled by default
+    pyst --no-spinner unit     # plain output
+    pyst -v unit               # verbose, no spinner
+  and confirm the spinner clears cleanly before the summary block.

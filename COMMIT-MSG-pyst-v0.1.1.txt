@@ -1,0 +1,20 @@
+pyst v0.1.1: -a shortcut + psst-style banner & summary
+
+- Add -a as short flag for --all-pythons (was --all-pythons only)
+- psst-style banner: "⚙️  TESTER = pyst: ON" + extended-intelligence
+  tagline before the selected-tests list
+- psst-style summary on the unittest path: success-rate header,
+  Total/Passed/Failed/Skipped/Duration breakdown, color-coded by
+  pass-rate (green ≥100, yellow ≥80, red below). Failed/error tests
+  printed as a triage list (max 15).
+- Run unittest in-process so we capture counts cleanly instead of
+  shelling out and losing them.
+- Reconfigure stdout/stderr to UTF-8 so emoji + box-drawing render on
+  Windows cp1252 consoles (cmd.exe / pwsh default on en-US).
+
+Validated 2026-06-03:
+  pyst -a (multi-Python fan-out) green on Win Server 2022 + macOS
+  across every interpreter on each box.
+
+TESTING.md updated: macOS multi (pyst -a) ✅ and Win Server 2022 multi
+(pyst -a) ✅ rows added.

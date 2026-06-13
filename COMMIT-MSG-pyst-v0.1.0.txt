@@ -1,0 +1,35 @@
+test infra: pyst v0.1.0 beta + tiered test split
+
+Adds pyst.py — Python's smart test runner, companion to PowerShell's
+psst. Discovers test_*.py, classifies by tier suffix, runs subsets via
+fuzzy match or tier name. Auto-prefers pytest, falls back to stdlib
+unittest. Multi-Python fan-out via py -0p on Windows.
+
+Tests reorganized into tiers:
+  - test_ipscan_smoke.py   (2 tests, <100ms, no I/O)
+  - test_ipscan_unit.py    (11 tests, mocked, deterministic)
+  - test_ipscan_integration.py (2 tests, opt-in via
+    RUN_INTEGRATION_TESTS, real loopback)
+  - test_pyst_smoke.py     (3 tests, import + argparser sanity)
+  - test_pyst_unit.py      (12 tests, classify/discover/match/parser)
+
+Shared fixtures live in _test_common.py: env header (PII-safe — no
+hostname/username), SUT version probe, admin detection, ipscan loader.
+The legacy monolithic test_ipscan.py is removed (superseded).
+
+Adaptive footer: when tests run under pyst (PYST_RUNNING=1 in env),
+the "try the pyst beta" pitch is suppressed to avoid nag-spam.
+Otherwise the footer shows concrete invocations.
+
+Validated platforms (15/15 each): Win11 + Py3.14.5 (elevated +
+non-elevated), Win11 + Py3.12.0 (elevated + non-elevated), Win Server
+2022 + Py3.14.5, macOS + Py3.12.12 (non-elevated). Windows 10 and
+Linux pending.
+
+Usage:
+  python pyst.py                   # all tests
+  python pyst.py smoke             # tier filter
+  python pyst.py unit ipscan       # AND-match
+  python pyst.py --tree            # show discovered tests
+  python pyst.py --all-pythons     # fan out across every Python
+  PYST_MODE=OFF python pyst.py     # raw passthrough, no pyst logic
