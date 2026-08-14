@@ -83,11 +83,14 @@ PYST_MODE=OFF python pyst.py    # raw passthrough — no pyst logic
 > into its own module once [pickaxe](https://github.com/wwwizards/pickaxe)
 > handles the heavy lifting for discovery and dependency wiring.
 
+**Mandatory usage policy (2026-08-14):** same rule as PowerShell's `psst` — always run Python tests through `pyst`, never `pytest`/`unittest` directly, except to diagnose `pyst` itself. `PYST_MODE=OFF` gives the raw passthrough when the wrapper is the thing under test. Full regression (bare `pyst`, no filter) is mandatory before/after every handoff, not just the subset you touched. Known gap: no code-coverage passthrough yet (see Roadmap below).
+
 ## Roadmap
 
 - **v0.9.1** (this) — Py3.14 + cross-platform fixes, regression suite.
 - **v0.9.2+** — IPv6 support, configurable port lists, JSONL streaming.
 - **pyst v1.0** — graduates to standalone module; pickaxe-powered discovery.
+- **pyst-evolution (backlogged 2026-08-14, ART-pattern candidate):** target feature + UI/UX parity with PowerShell's `psst` (bordered summary table, saved queries/aliases, tag-style selection) before considering it done. Destination undecided — own repo (pickaxe-driven extraction once Track A ships) or a sibling module inside the `psst` repo. Cross-referenced: root `.HANDOFF/STATE.md` (PINNED), `psst/ROADMAP.md`, `pickaxe/ROADMAP.md` Track A.
 
 ## License
 
